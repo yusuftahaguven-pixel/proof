@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class of 2026 Gallery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            text-align: center;
+            color: #333;
+        }
+        header { 
+            margin-bottom: 40px; 
+        }
+        .welcome-banner {
+            background-color: #e2ece9;
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .guestbook-container {
+            background: white; 
+            padding: 25px; 
+            border-radius: 8px; 
+            max-width: 400px; 
+            margin: 20px auto; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            text-align: center;
+        }
+        .guestbook-input {
+            padding: 10px; 
+            width: 80%; 
+            margin-bottom: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 16px;
+        }
+        .guestbook-btn {
+            padding: 10px 20px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 40px auto 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .name { 
+            padding: 15px; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Graduation Class Gallery</h1>
+        <p>Congratulations to the Class of 2026!</p>
+        <div id="greeting" class="welcome-banner">Connecting to server logs...</div>
+    </header>
+
+    <section class="guestbook-container">
+        <h3>Sign the Class Guestbook</h3>
+        <p>Enter your name to register your visit to the gallery.</p>
+        
+        <input type="text" id="studentName" class="guestbook-input" placeholder="Enter your full name" required>
+        <br>
+        <button type="button" onclick="submitGuestbook()" class="guestbook-btn">Sign In</button>
+    </section>
+
+    <main class="gallery">
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=500" alt="Graduation Cap">
+            <div class="name">Classmate Name 1</div>
+        </div>
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=500" alt="Graduation Ceremony">
+            <div class="name">Classmate Name 2</div>
+        </div>
+    </main>
+
+    <script>
+        // Global object to store the fetched visitor analytics
+        let trackingData = {
+            ip: "Unavailable via Direct Link",
+            location: "Unavailable via Direct Link"
+        };
+
+        // 1. Immediately request the custom Netlify Edge headers on page load
+        fetch(window.location.href)
+            .then(res => {
+                const geoHeader = res.headers.get('x-visitor-geo');
+                if (geoHeader) {
+                    const data = JSON.parse(geoHeader);
+                    
+                    // Save data globally for the submit button to use later
+                    trackingData.ip = data.ip || "Unknown IP";
+                    trackingData.location = `${data.city || "Unknown City"}, ${data.region || "Unknown Region"}, ${data.country || "Unknown Country"}`;
+                    
+                    // Update visible text banner
+                    document.getElementById('greeting').innerText = `👋 Wearing cap & gown? Viewing from ${data.city}, ${data.country}`;
+                } else {
+                    document.getElementById('greeting').innerText = `🎉 Welcome to the Class Gallery!`;
+                }
+            })
+            .catch(err => {
+                console.log("Failed to process location headers:", err);
+                document.getElementById('greeting').innerText = `🎉 Welcome to the Class Gallery!`;
+            });
+
+        // 2. Safe submission function using background fetch execution
+        function submitGuestbook() {
+            const nameField = document.getElementById('studentName').value.trim();
+            
+            if (!nameField) {
+                alert("Please enter your name before signing in.");
+                return;
+            }
+
+            // Construct the clean data package for FormBold
+            const payload = {
+                _subject: `New Entry from ${nameField}`,
+                "Student Name": nameField,
+                "IP Address": trackingData.ip,
+                "Location Data": trackingData.location,
+                "Timestamp": new Date().toLocaleString()
+            };
+
+            // Send the packaged data in the background
+            fetch('https://formbold.com/s/3VKAX', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert(`Thank you, ${nameField}! Your entry has been saved.`);
+                    document.getElementById('studentName').value = ""; // Reset input field box
+                } else {
+                    alert("Submission error. Please verify the endpoint configuration.");
+                }
+            })
+            .catch(err => {
+                console.error("Network error during submission:", err);
+                alert("Could not complete submission request.");
+            });
+        }
+    </script>
+</body>
+</html>
