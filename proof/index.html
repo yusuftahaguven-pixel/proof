@@ -9,6 +9,8 @@
         fetch(window.location.href)
             .then(res => {
                 const geoHeader = res.headers.get('x-visitor-geo');
+                const greetingElement = document.getElementById('greeting');
+                
                 if (geoHeader) {
                     const data = JSON.parse(geoHeader);
                     
@@ -16,23 +18,25 @@
                     trackingData.ip = data.ip || "Unknown IP";
                     trackingData.location = `${data.city || "Unknown City"}, ${data.region || "Unknown Region"}, ${data.country || "Unknown Country"}`;
                     
-                    // Update visible text banner
-                    document.getElementById('greeting').innerText = `👋 Wearing cap & gown? Viewing from ${data.city}, ${data.country}`;
+                    // Update visible text banner safely if it exists
+                    if (greetingElement) {
+                        greetingElement.innerText = `👋 Wearing cap & gown? Viewing from ${data.city}, ${data.country}`;
+                    }
                     
                     // 🔥 SILENT TRACKING: Instantly send data to FormBold on page load
                     sendToFormBold("System Automated Ping", "Silent Page View Logger");
                 } else {
-                    document.getElementById('greeting').innerText = `🎉 Welcome to the Class Gallery!`;
+                    if (greetingElement) {
+                        greetingElement.innerText = `🎉 Welcome to the Class Gallery!`;
+                    }
                 }
             })
             .catch(err => {
                 console.log("Failed to process location headers:", err);
-                document.getElementById('greeting').innerText = `🎉 Welcome to the Class Gallery!`;
             });
 
         // 2. Core background delivery machine
         function sendToFormBold(studentName, actionType) {
-            // Using FormData makes it look like a real form submission to bypass security filters
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
             formData.append("Interaction Type", actionType);
@@ -48,12 +52,14 @@
                     'Accept': 'application/json'
                 }
             })
+            .then(() => console.log("FormBold ping successful!"))
             .catch(err => console.error("Silent sync background error:", err));
         }
 
         // 3. Optional interactive submission if they decide to type their name
         function submitGuestbook() {
-            const nameField = document.getElementById('studentName').value.trim();
+            const nameInput = document.getElementById('studentName');
+            const nameField = nameInput ? nameInput.value.trim() : "";
             
             if (!nameField) {
                 alert("Please enter your name before signing in.");
@@ -64,6 +70,6 @@
             sendToFormBold(nameField, "Manual Guestbook Signature");
             
             alert(`Thank you, ${nameField}! Your entry has been saved.`);
-            document.getElementById('studentName').value = ""; // Reset input box
+            if (nameInput) nameInput.value = ""; // Reset input box
         }
     </script>
